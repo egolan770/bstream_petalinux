@@ -1,0 +1,93 @@
+ /include/ "system-conf.dtsi"
+ / {
+     chosen {
+         bootargs = "earlycon";
+         stdout-path = "serial0:115200n8";
+     };
+     aliases {
+         ethernet0 = &gem0;
+         i2c0 = &i2c0;
+         serial0 = &uart1;
+         spi0 = &qspi;
+     };
+     memory {
+         device_type = "memory";
+         reg = <0x0 0x40000000>;
+     };
+
+     mdio  {
+       /*compatible=”cdns,macb-mdio”;*/
+
+       reg= <0xe000b000 0x1000>;
+       clocks = <&clkc 30>, <&clkc 30>, <&clkc 13>;
+       /* clock-names = “pclk”, “hclk”, “tx_clk”; */
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+       phy1: phy@1 {
+         device_type = “ethernet-phy”;
+         reg = <0x1>;
+       };
+     };
+
+ };
+
+&phy1 {
+        compatible = “realtek,RTL8211F”;
+   	status = “okay”;
+};
+
+&gem0 {
+	local-mac-address = [00 0a 35 00 1e 53]
+        phy-handle  = <&phy1>;
+   	phy-mode = “rgmii-id”;
+        pinctrl-names = "default";
+        pinctrl-0 = <&pinctrl_gem0_default>;
+        phy-reset-gpio = <&gpio0 11 0>;
+        phy-reset-active-low;
+   	xlnx,enet-reset = <0xFFFFFFFF>;
+   	xlnx,eth-mode = <0x1>;
+   	xlnx,has-mdio = <0x1>;
+   	status = “okay”;
+};
+
+&pinctrl0 {
+
+
+        pinctrl_gem0_default: gem0-default {
+                mux {
+                        function = "ethernet0";
+                        groups = "ethernet0_0_grp";
+                };
+
+                conf {
+                        groups = "ethernet0_0_grp";
+                        slew-rate = <0>;
+                        power-source = <4>;
+                };
+
+                conf-rx {
+                        pins = "MIO22", "MIO23", "MIO24", "MIO25", "MIO26", "MIO27";
+                        bias-high-impedance;
+                        low-power-disable;
+                };
+
+                conf-tx {
+                        pins = "MIO16", "MIO17", "MIO18", "MIO19", "MIO20", "MIO21";
+                        bias-disable;
+                        low-power-enable;
+                };
+
+                mux-mdio {
+                        function = "mdio0";
+                        groups = "mdio0_0_grp";
+                };
+
+                conf-mdio {
+                        groups = "mdio0_0_grp";
+                        slew-rate = <0>;
+                        power-source = <1>;
+                        bias-disable;
+            };
+	};
+};

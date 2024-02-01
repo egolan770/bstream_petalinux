@@ -1,0 +1,329 @@
+/include/ "system-conf.dtsi"
+/ {
+    chosen {
+        bootargs = "earlycon clk_ignore_unused   uio_pdrv_genirq.of_id=generic-uio";
+        stdout-path = "serial0:115200n8";
+    };
+
+    aliases {
+        ethernet0 = &gem0;
+        i2c0 = &i2c0;
+        i2c1 = &i2c1;
+        serial0 = &uart1;
+        serial1 = &uart0;
+        spi0 = &qspi;
+        mmc0 = &sdhci0;
+        mmc1 = &sdhci1;
+    };
+
+};
+
+&clkc {
+    ps-clk-frequency = <33333333>;
+};
+
+&gem0 {
+    phy-handle = <&ethernet_phy>;
+    pinctrl-names = "default";
+    pinctrl-0 = <&pinctrl_gem0_default>;
+    phy-reset-gpio = <&gpio0 11 0>;
+    phy-reset-active-low; // TODO: check
+    // TODO: How to use MIO9 as PHY_INTB
+    status = "okay";
+
+    ethernet_phy: ethernet-phy@1 {
+        reg = <1>;
+        device_type = "ethernet-phy";
+    };
+};
+
+&gpio0 {
+    pinctrl-names = "default";
+    pinctrl-0 = <&pinctrl_gpio0_default>;
+};
+
+&i2c0 {
+    pinctrl-names = "default";
+    pinctrl-0 = <&pinctrl_i2c0_default>;
+    scl-gpios = <&gpio0 50 0>;
+    sda-gpios = <&gpio0 51 0>;
+    status = "okay";
+};
+
+&i2c1 {
+    pinctrl-names = "default";
+    pinctrl-0 = <&pinctrl_i2c1_default>;
+    scl-gpios = <&gpio0 32 0>;
+    sda-gpios = <&gpio0 33 0>;
+    status = "okay";
+};
+
+&qspi {
+    u-boot,dm-pre-reloc;
+    is-dual = <0>;
+    num-cs = <1>;
+    flash@0 {
+        // TODO: check driver, partitions and their sizes
+        compatible = "n25q128a11", "jedec,spi-nor";
+        reg = <0x0>;
+        spi-tx-bus-width = <1>;
+        spi-rx-bus-width = <4>;
+        spi-max-frequency = <50000000>;
+        #address-cells = <1>;
+        #size-cells = <1>;
+        partition@0 {
+            label = "qspi-fsbl-uboot";
+            reg = <0x0 0x100000>;
+        };
+        partition@100000 {
+            label = "qspi-linux";
+            reg = <0x100000 0x500000>;
+        };
+        partition@600000 {
+            label = "qspi-device-tree";
+            reg = <0x600000 0x20000>;
+        };
+        partition@620000 {
+            label = "qspi-rootfs";
+            reg = <0x620000 0x5E0000>;
+        };
+        partition@c00000 {
+            label = "qspi-bitstream";
+            reg = <0xC00000 0x400000>;
+        };
+    };
+};
+
+&sdhci0 {
+    u-boot,dm-pre-reloc;
+    pinctrl-names = "default";
+    pinctrl-0 = <&pinctrl_sdhci0_default>;
+    status = "okay";
+};
+
+&sdhci1 {
+    pinctrl-names = "default";
+    pinctrl-0 = <&pinctrl_sdhci1_default>;
+    non-removable;
+    status = "okay";
+};
+
+&uart0 {
+    pinctrl-names = "default";
+    pinctrl-0 = <&pinctrl_uart0_default>;
+    status = "okay";
+};
+
+&uart1 {
+    u-boot,dm-pre-reloc;
+    pinctrl-names = "default";
+    pinctrl-0 = <&pinctrl_uart1_default>;
+    status = "okay";
+};
+
+&register_interface_0 {
+    compatible = "generic-uio";
+    interrupts = <0 29 1>;
+    interrupt-parent = <&intc>;
+    status= "okay";
+};
+
+&pinctrl0 {
+    // for pin groups assignments see
+    // - https://github.com/Xilinx/linux-xlnx/blob/master/drivers/pinctrl/pinctrl-zynq.c
+    // - https://www.kernel.org/doc/Documentation/devicetree/bindings/pinctrl/xlnx%2Czynq-pinctrl.txt
+
+    pinctrl_gem0_default: gem0-default {
+        // ethernet0_0_grp pins: {16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27}
+        // mdio0_0_grp pins: {52, 53}
+        mux {
+            function = "ethernet0";
+            groups = "ethernet0_0_grp";
+        };
+
+        conf {
+            groups = "ethernet0_0_grp";
+            slew-rate = <1>; // IO_SPEED_FAST
+            power-source = <1>; // IO_STANDARD_LVCMOS18
+        };
+
+        conf-rx {
+            pins = "MIO22", "MIO23", "MIO24", "MIO25", "MIO26", "MIO27";
+            bias-high-impedance;
+            low-power-disable;
+        };
+
+        conf-tx {
+            pins = "MIO16", "MIO17", "MIO18", "MIO19", "MIO20", "MIO21";
+            bias-disable;
+            low-power-enable;
+        };
+
+        mux-mdio {
+            function = "mdio0";
+            groups = "mdio0_0_grp";
+        };
+
+        conf-mdio {
+            groups = "mdio0_0_grp";
+            slew-rate = <0>; // IO_SPEED_SLOW
+            power-source = <1>; // IO_STANDARD_LVCMOS18
+            bias-disable;
+        };
+    };
+
+    pinctrl_gpio0_default: gpio0-default {
+        mux {
+            function = "gpio0";
+            groups = 
+                  "gpio0_0_grp",  "gpio0_7_grp",  "gpio0_8_grp",  "gpio0_9_grp",
+                 "gpio0_10_grp", "gpio0_11_grp", "gpio0_14_grp", "gpio0_15_grp";
+        };
+
+        conf {
+            groups = 
+                  "gpio0_0_grp",  "gpio0_7_grp",  "gpio0_8_grp",  "gpio0_9_grp",
+                 "gpio0_10_grp", "gpio0_11_grp", "gpio0_14_grp", "gpio0_15_grp";
+            slew-rate = <0>; // IO_SPEED_SLOW
+            power-source = <3>; // IO_STANDARD_LVCMOS33
+        };
+
+        conf-pull-up {
+            pins = "MIO0", "MIO9", "MIO10", "MIO11", "MIO14", "MIO15";
+            bias-pull-up;
+        };
+
+        conf-pull-none {
+            pins = "MIO7", "MIO8";
+            bias-disable;
+        };
+    };
+
+    pinctrl_i2c0_default: i2c0-default {
+        // i2c0_10_grp pins: {50, 51}
+        mux {
+            groups = "i2c0_10_grp";
+            function = "i2c0";
+        };
+
+        conf {
+            groups = "i2c0_10_grp";
+            bias-pull-up;
+            slew-rate = <0>; // IO_SPEED_SLOW
+            power-source = <1>; // IO_STANDARD_LVCMOS18
+        };
+    };
+
+    pinctrl_i2c1_default: i2c1-default {
+        // i2c1_5_grp pins: {32, 33}
+        mux {
+            groups = "i2c1_5_grp";
+            function = "i2c1";
+        };
+
+        conf {
+            groups = "i2c1_5_grp";
+            bias-pull-up;
+            slew-rate = <0>; // IO_SPEED_SLOW
+            power-source = <1>; // IO_STANDARD_LVCMOS18
+        };
+    };
+
+    pinctrl_sdhci0_default: sdhci0-default {
+        // sdio0_2_grp pins: {40, 41, 42, 43, 44, 45}
+        mux {
+            groups = "sdio0_2_grp";
+            function = "sdio0";
+        };
+
+        conf {
+            groups = "sdio0_2_grp";
+            slew-rate = <0>; // IO_SPEED_SLOW
+            power-source = <1>; // IO_STANDARD_LVCMOS18
+            bias-disable;
+        };
+
+        mux-cd {
+            groups = "gpio0_48_grp";
+            function = "sdio0_cd";
+        };
+
+        conf-cd {
+            groups = "gpio0_48_grp";
+            bias-high-impedance;
+            bias-pull-up;
+            slew-rate = <0>; // IO_SPEED_SLOW
+            power-source = <1>; // IO_STANDARD_LVCMOS18
+        };
+
+        // WP is not connected
+    };
+
+    pinctrl_sdhci1_default: sdhci1-default {
+        // sdio1_2_grp pins: {34, 35, 36, 37, 38, 39}
+        mux {
+            groups = "sdio1_2_grp";
+            function = "sdio1";
+        };
+
+        conf {
+            groups = "sdio1_2_grp";
+            slew-rate = <1>; // IO_SPEED_FAST
+            power-source = <1>; // IO_STANDARD_LVCMOS18
+            bias-disable;
+        };
+
+        // CD and WP are not connected
+    };
+
+    pinctrl_uart0_default: uart0-default {
+        // uart0_9_grp pins: {46, 47}
+        mux {
+            groups = "uart0_9_grp";
+            function = "uart0";
+        };
+
+        conf {
+            groups = "uart0_9_grp";
+            slew-rate = <0>; // IO_SPEED_SLOW
+            power-source = <1>; // IO_STANDARD_LVCMOS18
+        };
+
+        conf-rx {
+            pins = "MIO46";
+            bias-high-impedance;
+        };
+
+        conf-tx {
+            pins = "MIO47";
+            bias-disable;
+        };
+    };
+
+    pinctrl_uart1_default: uart1-default {
+        // uart1_1_grp pins: {12, 13}
+        mux {
+            groups = "uart1_1_grp";
+            function = "uart1";
+        };
+
+        conf {
+            groups = "uart1_1_grp";
+            slew-rate = <0>; // IO_SPEED_SLOW
+            power-source = <3>; // IO_STANDARD_LVCMOS33
+        };
+
+        conf-rx {
+            pins = "MIO13";
+            bias-high-impedance;
+        };
+
+        conf-tx {
+            pins = "MIO12";
+            bias-disable;
+        };
+    };
+
+};
+
+

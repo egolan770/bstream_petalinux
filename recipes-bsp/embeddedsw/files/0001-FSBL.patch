@@ -1,0 +1,30 @@
+From 48c4e6755e092c987e9226e876881fe61d60c73b Mon Sep 17 00:00:00 2001
+From: Philipp Otterbein <potterbein@blockstream.com>
+Date: Fri, 19 Jan 2024 15:23:31 +0200
+Subject: [PATCH] MC10 workaround: change reg_phy_ctrl_slave_ratio
+
+---
+ lib/sw_apps/zynq_fsbl/src/main.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/lib/sw_apps/zynq_fsbl/src/main.c b/lib/sw_apps/zynq_fsbl/src/main.c
+index 62a5b4dd64..393445d90d 100644
+--- a/lib/sw_apps/zynq_fsbl/src/main.c
++++ b/lib/sw_apps/zynq_fsbl/src/main.c
+@@ -237,6 +237,13 @@ int main(void)
+ 	 */
+ 	SlcrUnlock();
+ 
++	/*
++	 * MC10 workaround: change reg_phy_ctrl_slave_ratio
++	 */
++	RegVal = Xil_In32(XPS_DDR_CTRL_BASEADDR + 0x190);
++	RegVal = (RegVal & ~0xFFC00) | (0xB2 << 10);
++	Xil_Out32(XPS_DDR_CTRL_BASEADDR + 0x190, RegVal);
++
+ 	/* If Performance measurement is required 
+ 	 * then read the Global Timer value , Please note that the
+ 	 * time taken for mio, clock and ddr initialisation
+-- 
+2.25.1
+
